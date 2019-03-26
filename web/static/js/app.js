@@ -1,21 +1,70 @@
-// Brunch automatically concatenates all files in your
-// watched paths. Those paths can be configured at
-// config.paths.watched in "brunch-config.js".
-//
-// However, those files will only be executed if
-// explicitly imported. The only exception are files
-// in vendor, which are never wrapped in imports and
-// therefore are always executed.
-
-// Import dependencies
-//
-// If you no longer want to use a dependency, remember
-// to also remove its path from "config.paths.watched".
+import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
 import "phoenix_html"
+import { Socket } from 'phoenix';
 
-// Import local files
-//
-// Local files can be imported directly using relative
-// paths "./socket" or full ones "web/static/js/socket".
+class App extends Component {
+  constructor(props) {
+    super(props);
 
-// import socket from "./socket"
+    this.state = {
+      comments: [],
+      text: '',
+    };
+  }
+
+  componentWillMount() {
+    const socket = new Socket('/socket', { params: { token: window.userToken } });
+    socket.connect();
+
+    this.channel = socket.channel(`comments:${this.props.postId}`, {});
+    this.channel.join()
+      .receive('ok', ({ comments }) => {
+        console.log(comments)
+        this.setState({ comments })
+      })
+      .receive('error', resp => console.log('Unable to join', resp));
+
+    this.channel.on(`comments:${this.props.postId}:new`, ({comment}) => {
+      this.setState({ comments: this.state.comments.concat(comment) });
+    });
+  }
+
+  onSubmit(event) {
+    event.preventDefault();
+    const { text } = this.state;
+    this.channel.push('comments:add', { content: text });
+    this.setState({ text: '' });
+  }
+
+  render() {
+    const { comments } = this.state;
+
+    return (
+      <div>
+        <form onSubmit={this.onSubmit.bind(this)}>
+          <textarea
+            value={this.state.text}
+            onChange={e => this.setState({ text: e.target.value })}
+          />
+          <button>Submit</button>
+        </form>
+
+        <ul className="collection">
+          {comments.map(comment =>
+            <li key={comment.id} className="collection-item">
+              {comment.content}
+              <div className="right">
+                {comment.user ? comment.user.nickname : 'Anonymous'}
+              </div>
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
+}
+
+window.renderCommentsApp = (target, postId) => {
+  ReactDOM.render(<App postId={postId} />, document.getElementById(target));
+};

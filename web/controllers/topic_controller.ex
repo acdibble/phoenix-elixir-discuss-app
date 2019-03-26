@@ -60,23 +60,23 @@ defmodule Discuss.TopicController do
     |> redirect(to: topic_path(conn, :index))
   end
 
+  def show(conn, %{"id" => id}) do
+    topic = Repo.get!(Topic, id)
+    render conn, "show.html", topic: topic
+  end
+
   defp check_owner(conn, _params) do
     %{params: %{"id" => topic_id}, assigns: %{user: user}} = conn
 
-    topic = Repo.get(Topic, topic_id)
+    topic = Repo.get!(Topic, topic_id)
 
-    cond do
-      topic == nil ->
-        redirect(conn, to: topic_path(conn, :index)) |> halt()
-
-      topic.user_id == user.id ->
-        assign(conn, :current_topic, topic)
-
-      true ->
-        conn
-        |> put_flash(:error, "You must own this topic in order to modify it")
-        |> redirect(to: topic_path(conn, :index))
-        |> halt()
+    if topic.user_id == user.id do
+      assign(conn, :current_topic, topic)
+    else
+      conn
+      |> put_flash(:error, "You must own this topic in order to modify it")
+      |> redirect(to: topic_path(conn, :index))
+      |> halt()
     end
   end
 end

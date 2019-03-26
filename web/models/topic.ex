@@ -4,7 +4,8 @@ defmodule Discuss.Topic do
   schema "topics" do
     field :title, :string
 
-    belongs_to :users, Discuss.User, foreign_key: :user_id
+    belongs_to :user, Discuss.User
+    has_many :comments, Discuss.Comment
   end
 
   def changeset(struct, params \\ %{}) do

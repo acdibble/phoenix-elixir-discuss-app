@@ -12,6 +12,6 @@ defmodule Discuss.Plugs.SetUser do
 
     user = user_id && Repo.get(User, user_id)
 
-    assign(conn, :user, user || nil)
+    assign(conn, :user, user)
   end
 end
